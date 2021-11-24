@@ -2,7 +2,7 @@
 
 //----------------------------------------Tools begin ----------------------------------------
 
-const size_t Max_out_file_len = 49;
+const size_t Max_out_file_len = 150;
 const size_t Max_cmd_len  = 149;
 
 const char* Img_dump_dir = "./dump/";
@@ -37,6 +37,10 @@ int64_t get_file_size (FILE* inp) {
     fseek(inp, 0L, SEEK_SET);
 
     return size;
+}
+
+bool is_oper_sym(char c) {
+    return isalpha(c) || c == '+' || c == '-' || c == '*' || c == '/' || c == '^'; 
 }
 
 
@@ -79,8 +83,8 @@ bool is_node_operation (Tree_node* node) {}
 Node_tree_status node_write_const (Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(node, NULL, Node_tree_status::NULL_PTR);
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
-    printf("check\n");
     ASSERT_NOT_EQUAL_RET(node->type, Node_type::CONST, Node_tree_status::TYPE_NOT_MATCHING);
+    // printf("check\n");
     fprintf(output, "\"%d\", shape=\"egg\", color=\"grey\", thickness=4, fillcolor=\"darkolivegreen2\"", node->data.num);
     return Node_tree_status::OK;
 }
@@ -95,7 +99,7 @@ Node_tree_status node_write_variable (Tree_node* node, FILE* output) {
     return Node_tree_status::OK;
 }
 
-#define DEF_OPER(NAME, VAL, code) case Operation::NAME : code; break;
+#define DEF_OPER(NAME, VAL, code, arg_cnt) case Operation::NAME : code; break;
 Node_tree_status node_write_operator (Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(node, NULL, Node_tree_status::NULL_PTR);
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
@@ -151,9 +155,8 @@ Node_tree_status tree_init(Tree* tree) {
     
     tree->root = new_node(Node_type::NONE, {.num = 0}, NULL, NULL, NULL);
 
-    
+    return Node_tree_status::OK;
 }
-
 
 Node_tree_status tree_read(Tree* tree, FILE* input) {
     ASSERT_EQUAL_RET(input, NULL, Node_tree_status::NULL_PTR);
@@ -161,6 +164,7 @@ Node_tree_status tree_read(Tree* tree, FILE* input) {
     if (tree->root != NULL) delete_node(tree->root);
 
     tree->root = new_node(Node_type::NONE, {}, NULL, NULL, NULL);
+    Tree_node* cur_node = tree->root;
 
     Tokenizer tokenizer = {};
     tokenizer_init(&tokenizer, input);
@@ -168,84 +172,77 @@ Node_tree_status tree_read(Tree* tree, FILE* input) {
     Token token = {};
     get_token(&tokenizer, &token);
     
-    // while (token->type != Token_type::EPSILON || token->type != Token_type::UNKNOWN) {
+
+    while (token.type != Token_type::EPSILON && token.type != Token_type::UNKNOWN) {
+        switch (token.type) {
+
+        case Token_type::EPSILON:
+            printf("Epsilon\n");
+            if (cur_node->prev != NULL) RAISE_ERR(Node_tree_status::TOKEN_PARSE_ERR);
+            break;
         
-    // }
-
-    // if (token == Token_type::UNKNOWN) {
-    //     ASSERT_NOT_EQUAL(token->type, Token_type::UNKNOWN, Node_tree_status::ERROR_IN_CALLED_FUNC);
-    //     return Node_tree_status::ERROR_IN_CALLED_FUNC;
-    // }
-
-    switch (token.type)
-    {
-    case Token_type::EPSILON:
-        printf("Epsilon\n");
-        break;
-    
-    case Token_type::CLOSING_BRACKET:
-        printf("CLOSING_BRACKET\n");
-        break;
-    
-    case Token_type::OPEN_BRACKET:
-        printf("OPEN_BRACKET\n");
-        break;
-    
-    case Token_type::UNKNOWN:
-        printf("UNKNOWN\n");
-        break;
-    
-    case Token_type::STANDART: {
-            switch (token.node->type)
-            {
-            case Node_type::CONST :
-                printf("Const %d\n", token.node->data.num);
-                break;
-
-            case Node_type::VARIABLE :
-                printf("Variable %c\n", token.node->data.variable);
-                break;
-
-            case Node_type::OPERATOR :
-                printf("Operator\n");
-                break;
-            
-            default:
-                break;
+        case Token_type::CLOSING_BRACKET:
+            ASSERT_EQUAL_RET(cur_node->prev, NULL, Node_tree_status::NULL_PTR);
+            cur_node = cur_node->prev;
+            printf("CLOSING_BRACKET\n");
+            break;
+        
+        case Token_type::OPEN_BRACKET:
+            printf("OPEN_BRACKET\n");
+            if (cur_node->left == NULL) {
+                cur_node->left = new_node(Node_type::NONE, {}, cur_node, NULL, NULL);
+                cur_node = cur_node->left;
+            } else if (cur_node->right == NULL) {
+                cur_node->right = new_node(Node_type::NONE, {}, cur_node, NULL, NULL);
+                cur_node = cur_node->right;
+            } else {
+                RAISE_ERR(Node_tree_status::TOKEN_PARSE_ERR);
+                return Node_tree_status::TOKEN_PARSE_ERR;
             }
+            
+            break;
+        
+        case Token_type::UNKNOWN:
+            printf("UNKNOWN\n");
+            RAISE_ERR(Node_tree_status::TOKEN_PARSE_ERR);
+            break;
+        
+        case Token_type::STANDART:
+            printf("standart\n");
+            cur_node->type = token.node_type;
+            cur_node->data = token.data;
+            break;
 
+        default:
+            break;
         }
-        break;
-
-    default:
-        break;
+        get_token(&tokenizer, &token);
     }
-    printf("tokenizer ret: %d\n", token.node->data.num);
+
+    if (token.type == Token_type::UNKNOWN) {
+        ASSERT_NOT_EQUAL(token.type, Token_type::UNKNOWN, Node_tree_status::ERROR_IN_CALLED_FUNC);
+        return Node_tree_status::ERROR_IN_CALLED_FUNC;
+    }
 
     return Node_tree_status::OK;
-}
-
-Node_tree_status graph_tree(Tree* tree) {
-    return Node_tree_status::NOT_INITIALIZED;
 }
 
 Node_tree_status graph_node(Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(node, NULL, Node_tree_status::NULL_PTR);
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
 
-    fprintf(output, "   L%lu[label=",
-                 node);
+    fprintf(output, "   L%lu[label=", node);
     node_write(node, output);
-    //  node, list->data[node].prev, node, list->data[node].next);
+
     fprintf(output, " style=filled];\n");
 
     if (node->left != NULL)  { 
         graph_node(node->left,  output);
-        fprintf(output, "L%lu->L%lu[color=\"black\"];\n", node, node->left);
+        fprintf(output, "    L%lu->L%lu[color=\"black\"];\n", node, node->left);
     }
     if (node->right != NULL) { 
         graph_node(node->right,  output);
-        fprintf(output, "L%lu->L%lu[color=\"black\"];\n", node, node->right);
+        fprintf(output, "    L%lu->L%lu[color=\"black\"];\n", node, node->right);
     }
 
     return Node_tree_status::OK;
@@ -259,18 +256,14 @@ Node_tree_status fgraph_tree(Tree* tree) {
 
     char filename[Max_out_file_len];
     sprintf(filename, "%sLIST_DMP_№%d.dot", Img_dump_dir, dumpNumber);
+    
     FILE* file = fopen(filename, "w");
     assert(file && "cant open file");
 
     fprintf(file,   "digraph G{\n");
-    // fprintf(file,   "   rankdir=LR;\n");
-    // fprintf(file,   "   splines=ortho;\n");
     fprintf(file,   "   nodesep=1;\n");
-    // fprintf(file,   "   F[shape=\"circle\", color=\"blue\", label=\"Free\"];\n");
     
-
     graph_node(tree->root, file);
-
 
     fprintf(file, "}");
     fclose(file);
@@ -279,10 +272,8 @@ Node_tree_status fgraph_tree(Tree* tree) {
 
     sprintf(command, "dot %sLIST_DMP_№%d.dot -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
     system(command);
-
-
+    ++dumpNumber;
     return Node_tree_status::OK;
-
 }
 
 //----------------------------------------Tree end ----------------------------------------
@@ -333,10 +324,19 @@ Node_tree_status get_token_try_const(Tokenizer* tokenizer, Token* token) {
     
     token->type = Token_type::STANDART;
     
-    token->node = new_node(Node_type::CONST, {.num = cur_num}, NULL, NULL, NULL);
+    token->data.num = cur_num;
+    token->node_type = Node_type::CONST;
 
     return Node_tree_status::OK;
 }
+
+#define DEF_OPER(NAME, VAL, code, arg_cnt) case VAL: {                                        \
+        token->type = Token_type::STANDART;                                                    \
+        token->node_type = Node_type::OPERATOR;                                                 \
+        token->data.opr=Operation::NAME;                                                         \
+    }                                                                                             \
+    return Node_tree_status::OK;                                                                   \
+    break;
 
 Node_tree_status get_token_try_operation(Tokenizer* tokenizer, Token* token) {
     ASSERT_EQUAL_RET(tokenizer, NULL, Node_tree_status::NULL_PTR);
@@ -346,12 +346,30 @@ Node_tree_status get_token_try_operation(Tokenizer* tokenizer, Token* token) {
 
     num_t cur_num = 0;
     size_t prev_offset = tokenizer->offset;
-    
-        
 
-    printf("operation todo\n");
+    while (max_oper_len > 0 && tokenizer->offset < tokenizer->size && is_oper_sym(tokenizer->data[tokenizer->offset])) {
+        cur_num *= 256;
+        cur_num += tokenizer->data[tokenizer->offset];
+        // printf("sym = %c\n", tokenizer->data[tokenizer->offset]);
+        ++tokenizer->offset;
+        --max_oper_len;
+    }  
+    // printf("cur_num = %d\n", cur_num);
+
+    switch (cur_num) {
+        
+        #include "OPERATOR_DEF.hpp"
+        
+        default:
+            token->type = Token_type::ERR;
+            tokenizer->offset = prev_offset;
+            return Node_tree_status::TOKEN_PARSE_ERR;
+            break;
+    }
+
     return Node_tree_status::TOKEN_PARSE_ERR;
 }
+#undef DEFO_OPER
 
 Node_tree_status get_token_try_variable(Tokenizer* tokenizer, Token* token) {
     ASSERT_EQUAL_RET(tokenizer, NULL, Node_tree_status::NULL_PTR);
@@ -360,13 +378,35 @@ Node_tree_status get_token_try_variable(Tokenizer* tokenizer, Token* token) {
     if (tokenizer->offset < tokenizer->size && isalpha(tokenizer->data[tokenizer->offset])) {
         token->type = Token_type::STANDART;
         
-        Node_data data;
-        data.variable = tokenizer->data[tokenizer->offset]; 
-        
-        token->node = new_node(Node_type::VARIABLE, data, NULL, NULL, NULL);
+        token->data.variable = tokenizer->data[tokenizer->offset]; 
+        token->node_type = Node_type::VARIABLE;
 
         ++tokenizer->offset;
         return Node_tree_status::OK;
+    } 
+
+    return Node_tree_status::TOKEN_PARSE_ERR;
+}
+
+Node_tree_status get_token_try_bracket(Tokenizer* tokenizer, Token* token) {
+    ASSERT_EQUAL_RET(tokenizer, NULL, Node_tree_status::NULL_PTR);
+    ASSERT_EQUAL_RET(token, NULL, Node_tree_status::NULL_PTR);
+
+    if (tokenizer->offset < tokenizer->size) {
+        if (tokenizer->data[tokenizer->offset] == '(') {
+            token->type = Token_type::OPEN_BRACKET;
+            ++tokenizer->offset;
+            return Node_tree_status::OK;
+
+        } else if (tokenizer->data[tokenizer->offset] == ')') {
+            token->type = Token_type::CLOSING_BRACKET;
+            ++tokenizer->offset;
+            return Node_tree_status::OK;
+
+        } else {
+            token->type = Token_type::ERR;
+            return Node_tree_status::TOKEN_PARSE_ERR;
+        }
     } 
 
     printf("variable todo\n");
@@ -377,12 +417,17 @@ Node_tree_status get_token(Tokenizer* tokenizer, Token* token) {
     ASSERT_EQUAL_RET(tokenizer, NULL, Node_tree_status::NULL_PTR);
     ASSERT_EQUAL_RET(token, NULL, Node_tree_status::NULL_PTR);
 
-    if (tokenizer->offset == tokenizer->size || tokenizer->data[tokenizer->offset] == '\n' || tokenizer->data[tokenizer->offset] == '\r') {
+    if (tokenizer->offset == tokenizer->size || tokenizer->data[tokenizer->offset] == '\n' || tokenizer->data[tokenizer->offset] == '\r' || tokenizer->data[tokenizer->offset] == '\0') {
         token->type = Token_type::EPSILON;
         return Node_tree_status::OK;
     }
 
     size_t cur_offset = tokenizer->offset;
+
+    get_token_try_operation(tokenizer, token);
+    if (token->type != Token_type::ERR) {
+        return Node_tree_status::OK;
+    }
 
     get_token_try_const(tokenizer, token);
     if (token->type != Token_type::ERR) {
@@ -394,14 +439,98 @@ Node_tree_status get_token(Tokenizer* tokenizer, Token* token) {
         return Node_tree_status::OK;
     }
 
-    get_token_try_operation(tokenizer, token);
+    get_token_try_bracket(tokenizer, token);
     if (token->type != Token_type::ERR) {
         return Node_tree_status::OK;
     }
 
+    printf("cur sym = %d  offset %d  size %d\n", tokenizer->data[tokenizer->offset], tokenizer->offset, tokenizer->size);
+    // int a  = 1 / 0;
+    token->type = Token_type::UNKNOWN;
+    fprintf(stderr, "\033[1;31;40mTokenizer offset: %d\033[0m\n", tokenizer->offset);
     RAISE_ERR(Node_tree_status::TOKEN_PARSE_ERR);
-
     return Node_tree_status::ERROR_IN_CALLED_FUNC;
 }
 
 //----------------------------------------Lexer end ----------------------------------------
+
+
+//----------------------------------------Differ begin ----------------------------------------
+Tree_node* node_copy(Tree_node* node) {
+    assert(node && "node must not be NULL");
+
+    Tree_node* n_node = (Tree_node*) calloc(1, sizeof(Tree_node));
+    *n_node = *node;
+    if (node->left != NULL) {
+        n_node->left = node_copy(node->left);
+    }
+    if (node->right != NULL) {
+        n_node->right = node_copy(node->right);
+    }
+
+    return n_node;
+
+}
+
+Tree_node* differ_node(Tree_node* node, char var) {
+    assert(node && "node must not be NULL");
+
+    if (node->type == Node_type::VARIABLE) {
+       DIFF_VAR(node);
+    } 
+
+    if (node->type == Node_type::CONST) {
+        printf("diff const\n");
+        DIFF_CONST(node);
+    }
+
+    if (node->type == Node_type::OPERATOR) {
+
+        switch (node->data.opr) {
+        case Operation::ADD: DIFF_ADD(node); break;
+        
+        case Operation::SUB: DIFF_SUB(node); break;
+        
+        case Operation::MUL: DIFF_MUL(node); break;
+        
+        case Operation::DIV: DIFF_DIV(node); break;
+        
+        case Operation::POW: DIFF_POW(node); break;
+        
+        case Operation::SIN: DIFF_SIN(node); break;
+        
+        case Operation::COS: DIFF_COS(node); break;
+        
+        case Operation::TAN: DIFF_TAN(node); break;
+        
+        case Operation::COT: DIFF_COT(node); break;
+        
+        case Operation::LOG: DIFF_LOG(node); break; 
+        
+        default:
+            ASSERT_EQUAL(Node_tree_status::OK, Node_tree_status::RAISE_ERR, Node_tree_status::RAISE_ERR);
+            return NULL;
+            break;
+        }
+
+    }
+
+    return NULL;
+}
+
+Tree* differ(Tree* tree, char var) {
+    assert(tree && "tree ptr must not be null");
+    Tree* diff_tree = (Tree*) calloc(1, sizeof(Tree));
+
+    diff_tree->root = node_copy(tree->root);
+    if (diff_tree->root == NULL) {
+        printf("copy not ok \n");
+    } else {
+        printf("copy ok \n");
+    }
+    diff_tree->root = differ_node(diff_tree->root, var);
+
+    return diff_tree;
+}
+
+//----------------------------------------Differ end ----------------------------------------

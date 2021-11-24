@@ -26,6 +26,10 @@ int main() {
     fgraph_tree(&tree);
     FILE* file = fopen("test.txt", "r");
     tree_read(&tree, file);
+    fgraph_tree(&tree);
+    Tree* diff_tree = differ(&tree, 'x');
+
+    fgraph_tree(diff_tree);
     // write_node(&node, stdout);
     return 0;
 }

@@ -1,7 +1,7 @@
 # Applicaton options
 APPLICATION = $(notdir $(CURDIR))# Application name is name of root holder
 GXX_STANDARD = 17 # 11, 14, 17, 20
-OUT_FILE_NAME = $(APPLICATION).out
+OUT_FILE_NAME = $(APPLICATION).exe
 
 # Сompiler options
 CC = g++

@@ -3,10 +3,11 @@
 
 #include "assert.h"
 #include "stdio.h"
-#include "strings.h"
+#include "string.h"
 #include "stdlib.h"
 #include <stack>
 #include <cctype>
+#include "Difffer_DSL.hpp"
 
 static std::stack<char*> stack_trace;
 
@@ -64,11 +65,6 @@ int64_t get_file_size (FILE* inp);
 
 //----------------------------------------Tools end ----------------------------------------
 
-
-
-
-
-
 //----------------------------------------Node begin ----------------------------------------
 
 enum class Node_type {
@@ -78,7 +74,7 @@ enum class Node_type {
     OPERATOR
 };
 
-#define DEF_OPER(NAME, VAL, code) NAME = VAL,
+#define DEF_OPER(NAME, VAL, code, arg_cnt) NAME = VAL,
 enum class Operation {
     #include "OPERATOR_DEF.hpp"
 };
@@ -132,8 +128,6 @@ Node_tree_status tree_init(Tree* tree);
 
 Node_tree_status tree_read(Tree* tree, FILE* input);
 
-Node_tree_status graph_tree(Tree* tree);
-
 Node_tree_status fgraph_tree(Tree* tree);
 
 //----------------------------------------Tree end ----------------------------------------
@@ -150,7 +144,8 @@ enum class Token_type {
 
 struct Token {
     Token_type type;
-    Tree_node* node;
+    Node_type node_type;
+    Node_data data;
 };
 
 struct Tokenizer {
@@ -163,6 +158,8 @@ Node_tree_status tokenizer_init (Tokenizer* tokenizer, FILE* input);
 
 Node_tree_status tokenizer_destruct (Tokenizer* tokenizer);
 
+Node_tree_status get_token_try_bracket(Tokenizer* tokenizer, Token* token);
+
 Node_tree_status get_token_try_const(Tokenizer* tokenizer, Token* token);
 
 Node_tree_status get_token_try_operation(Tokenizer* tokenizer, Token* token);
@@ -172,5 +169,13 @@ Node_tree_status get_token_try_variable(Tokenizer* tokenizer, Token* token);
 Node_tree_status get_token(Tokenizer* tokenizer, Token* token);
 
 //----------------------------------------Lexer end ----------------------------------------
+
+//----------------------------------------Differ begin ----------------------------------------
+Tree_node* differ_node(Tree_node* node, char var);
+
+Tree* differ(Tree* tree, char var);
+
+//----------------------------------------Differ end ----------------------------------------
+
 
 #endif
