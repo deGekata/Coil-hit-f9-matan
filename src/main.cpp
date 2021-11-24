@@ -25,11 +25,17 @@ int main() {
     // FILE* file = fopen("Temp")
     fgraph_tree(&tree);
     FILE* file = fopen("test.txt", "r");
+    printf("%d\n", __LINE__);
+
     tree_read(&tree, file);
+    printf("%d\n", __LINE__);
+
     fgraph_tree(&tree);
+    printf("%d\n", __LINE__);
     Tree* diff_tree = differ(&tree, 'x');
 
     fgraph_tree(diff_tree);
+    system("rm ./dump/*.png");
     // write_node(&node, stdout);
     return 0;
 }

@@ -11,24 +11,24 @@ const char* Next_link_color = "blue";
 const char* Prev_link_color = "red";
 const char* Free_link_color = "orange";
 
-bool resolve_errors(Node_tree_status status, char* msg) {
-    switch (status) {
-    case Node_tree_status::OK:
-        break;
-    case Node_tree_status::NOT_INITIALIZED:
-        fprintf(stderr, "%s", msg);
-        return 1;
-        break;
-    case Node_tree_status::NULL_PTR:
-        fprintf(stderr, "%s %s", msg, " Null ptr");
-        break;
+// bool resolve_errors(Node_tree_status status, char* msg) {
+//     switch (status) {
+//     case Node_tree_status::OK:
+//         break;
+//     case Node_tree_status::NOT_INITIALIZED:
+//         fprintf(stderr, "%s", msg);
+//         return 1;
+//         break;
+//     case Node_tree_status::NULL_PTR:
+//         fprintf(stderr, "%s %s", msg, " Null ptr");
+//         break;
     
-    default:
+//     default:
 
-        break;
-    }
-    return true;
-}
+//         break;
+//     }
+//     return true;
+// }
 
 int64_t get_file_size (FILE* inp) {
     assert(inp);
@@ -56,6 +56,9 @@ Tree_node* new_node (Node_type type, Node_data data, Tree_node* prev, Tree_node*
     node->left = left;
     node->right = right;
 
+    if (left != NULL) node->left->prev = node;
+    if (right != NULL) node->right->prev = node;
+    
     node->type = type;
     node->data = data;
 
@@ -74,11 +77,11 @@ Node_tree_status delete_node (Tree_node* node) {
 }
 
 
-bool is_node_const (Tree_node* node) {}
+// bool is_node_const (Tree_node* node) {}
 
-bool is_node_variable (Tree_node* node) {}
+// bool is_node_variable (Tree_node* node) {}
 
-bool is_node_operation (Tree_node* node) {}
+// bool is_node_operation (Tree_node* node) {}
 
 Node_tree_status node_write_const (Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(node, NULL, Node_tree_status::NULL_PTR);
@@ -262,6 +265,7 @@ Node_tree_status fgraph_tree(Tree* tree) {
 
     fprintf(file,   "digraph G{\n");
     fprintf(file,   "   nodesep=1;\n");
+    fprintf(file,   "   ratio=1.0;\n");
     
     graph_node(tree->root, file);
 
@@ -270,7 +274,7 @@ Node_tree_status fgraph_tree(Tree* tree) {
 
     char command[Max_cmd_len] = {};
 
-    sprintf(command, "dot %sLIST_DMP_№%d.dot -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
+    sprintf(command, "dot %sLIST_DMP_№%d.dot -Gsize=20,20! -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
     system(command);
     ++dumpNumber;
     return Node_tree_status::OK;
@@ -472,9 +476,32 @@ Tree_node* node_copy(Tree_node* node) {
 
 }
 
-Tree_node* differ_node(Tree_node* node, char var) {
+bool node_is_const(Tree_node* node) {
     assert(node && "node must not be NULL");
 
+    return node->type == Node_type::CONST;
+}
+
+bool node_contains_const(Tree_node* node) {
+    assert(node && "node must not be NULL");
+
+    
+
+}
+
+bool node_contains_var(Tree_node* node, char var) {
+    assert(node && "node must not be NULL");
+
+    bool ret_val = node->type == Node_type::VARIABLE && node->data.variable == var;
+    if (node->left != NULL) ret_val = ret_val || node_contains_var(node->left, var);
+    if (node->right != NULL) ret_val = ret_val || node_contains_var(node->right, var);
+
+    return ret_val;
+}
+
+Tree_node* differ_node(Tree_node* node, char var) {
+    assert(node && "node must not be NULL");
+    printf("differ");
     if (node->type == Node_type::VARIABLE) {
        DIFF_VAR(node);
     } 
@@ -487,25 +514,25 @@ Tree_node* differ_node(Tree_node* node, char var) {
     if (node->type == Node_type::OPERATOR) {
 
         switch (node->data.opr) {
-        case Operation::ADD: DIFF_ADD(node); break;
+        case Operation::ADD:printf("%d diff line\n", __LINE__); DIFF_ADD(node); break;
         
-        case Operation::SUB: DIFF_SUB(node); break;
+        case Operation::SUB:printf("%d diff line\n", __LINE__); DIFF_SUB(node); break;
         
-        case Operation::MUL: DIFF_MUL(node); break;
+        case Operation::MUL:printf("%d diff line\n", __LINE__); DIFF_MUL(node); break;
         
-        case Operation::DIV: DIFF_DIV(node); break;
+        case Operation::DIV:printf("%d diff line\n", __LINE__); DIFF_DIV(node); break;
         
-        case Operation::POW: DIFF_POW(node); break;
+        case Operation::POW:printf("%d diff line\n", __LINE__); DIFF_POW(node); break;
         
-        case Operation::SIN: DIFF_SIN(node); break;
+        case Operation::SIN:printf("%d diff line\n", __LINE__); DIFF_SIN(node); break;
         
-        case Operation::COS: DIFF_COS(node); break;
+        case Operation::COS:printf("%d diff line\n", __LINE__); DIFF_COS(node); break;
         
-        case Operation::TAN: DIFF_TAN(node); break;
+        case Operation::TAN:printf("%d diff line\n", __LINE__); DIFF_TAN(node); break;
         
-        case Operation::COT: DIFF_COT(node); break;
+        case Operation::COT:printf("%d diff line\n", __LINE__); DIFF_COT(node); break;
         
-        case Operation::LOG: DIFF_LOG(node); break; 
+        case Operation::LOG:printf("%d diff line\n", __LINE__); DIFF_LOG(node); break; 
         
         default:
             ASSERT_EQUAL(Node_tree_status::OK, Node_tree_status::RAISE_ERR, Node_tree_status::RAISE_ERR);

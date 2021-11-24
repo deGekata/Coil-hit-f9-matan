@@ -63,7 +63,45 @@
                         differ_node(node->left->right->right, var);      \
                         return node;}                  
 
-#define DIFF_POW(node) {};
+#define DIFF_POW(node) {if (node->left == NULL || node->right == NULL)   \
+                            return NULL;                                  \
+                        bool left_var = node_contains_var(node->left, var);     \
+                        bool right_var = node_contains_var(node->right, var);    \
+                        Tree_node* left = node->left;                        \
+                        Tree_node* right = node->right;                       \
+                                                                               \
+                        if (left_var && right_var) {\
+                            node->left = new_node(Node_type::OPERATOR, {.opr = Operation::POW}, node, left, right);\
+                            node->data.opr = Operation::MUL;                        \
+                            node->right = new_node(Node_type::OPERATOR, {.opr = Operation::MUL}, node, node_copy(right), OPERATOR(Operation::LOG));\
+                            node->right->right->left = node_copy(left);                                                                      \
+                            differ_node(node->right, var);    \
+                            return node;                                                                      \
+                        }\
+                        if (!left_var && !right_var) { \
+                            delete_node(left);          \
+                            delete_node(right);          \
+                            node->type = Node_type::CONST;\
+                            node->data.num = 0;            \
+                            return node;                    \
+                        }                                    \
+                        if (!left && right_var) {                                                                    \
+                            node->left = new_node(Node_type::OPERATOR, {.opr = Operation::POW}, node , left, right);\
+                            node->type = Node_type::OPERATOR;                                                      \
+                            node->data.opr = Operation::POW;                                                      \
+                            node->right = OPERATOR(Operation::MUL);                                              \
+                            node->right->right = node_copy(right);                                              \
+                            node->right->left = OPERATOR(Operation::LOG);                                      \
+                            node->right->left->left = left;                                                   \
+                            differ_node(node->right->right, var);                                            \
+                            return node;                                                                    \
+                        }                                                                                  \
+                        if (left && !right_var) {                                                                            \
+                            node->right = new_node(Node_type::OPERATOR, {.opr = Operation::SUB}, node, node->right, CONST(1));\
+                            return node;                                                                                     \
+                        }                                                                                                   \
+                        return NULL;                                                                                       \
+    };
 
 #define DIFF_SIN(node) {if (node->left == NULL || node->right != NULL)\
                             return NULL;                               \
