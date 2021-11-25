@@ -88,7 +88,7 @@ Node_tree_status node_write_const (Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
     ASSERT_NOT_EQUAL_RET(node->type, Node_type::CONST, Node_tree_status::TYPE_NOT_MATCHING);
     // printf("check\n");
-    fprintf(output, "\"%d\", shape=\"egg\", color=\"grey\", thickness=4, fillcolor=\"darkolivegreen2\"", node->data.num);
+    fprintf(output, "\"%d\", shape=\"circle\", color=\"grey\", thickness=4, fillcolor=\"darkolivegreen2\"", node->data.num);
     return Node_tree_status::OK;
 }
 
@@ -97,7 +97,7 @@ Node_tree_status node_write_variable (Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
     ASSERT_NOT_EQUAL_RET(node->type, Node_type::VARIABLE, Node_tree_status::TYPE_NOT_MATCHING);
 
-    fprintf(output, "\"%c\", shape=\"egg\", color=\"grey\", thickness=4, fillcolor=\"cornflowerblue\"", node->data.variable);
+    fprintf(output, "\"%c\", shape=\"circle\", color=\"grey\", thickness=4, fillcolor=\"cornflowerblue\"", node->data.variable);
 
     return Node_tree_status::OK;
 }
@@ -230,6 +230,15 @@ Node_tree_status tree_read(Tree* tree, FILE* input) {
     return Node_tree_status::OK;
 }
 
+void make_false(Tree_node* node) {
+    if (node == NULL) return;
+    node->used = false;
+    make_false(node->left);
+    make_false(node->right);
+    return;
+}
+
+
 Node_tree_status graph_node(Tree_node* node, FILE* output) {
     ASSERT_EQUAL_RET(node, NULL, Node_tree_status::NULL_PTR);
     ASSERT_EQUAL_RET(output, NULL, Node_tree_status::NULL_PTR);
@@ -238,7 +247,8 @@ Node_tree_status graph_node(Tree_node* node, FILE* output) {
     node_write(node, output);
 
     fprintf(output, " style=filled];\n");
-
+    if (node->used == 1) return Node_tree_status::OK;
+    node->used = 1;
     if (node->left != NULL)  { 
         graph_node(node->left,  output);
         fprintf(output, "    L%lu->L%lu[color=\"black\"];\n", node, node->left);
@@ -253,7 +263,6 @@ Node_tree_status graph_node(Tree_node* node, FILE* output) {
 
 Node_tree_status fgraph_tree(Tree* tree) {
     ASSERT_EQUAL_RET(tree, NULL, Node_tree_status::NULL_PTR);
-    ASSERT_EQUAL_RET(tree->root, NULL, Node_tree_status::NULL_PTR);
 
     static int dumpNumber = 0;
 
@@ -264,17 +273,18 @@ Node_tree_status fgraph_tree(Tree* tree) {
     assert(file && "cant open file");
 
     fprintf(file,   "digraph G{\n");
-    fprintf(file,   "   nodesep=1;\n");
-    fprintf(file,   "   ratio=1.0;\n");
+    fprintf(file,   "   nodesep=0.1;\n");
+    fprintf(file,   "   ratio=0.5625;\n");
     
     graph_node(tree->root, file);
-
+    make_false(tree->root);
     fprintf(file, "}");
     fclose(file);
 
     char command[Max_cmd_len] = {};
 
-    sprintf(command, "dot %sLIST_DMP_№%d.dot -Gsize=20,20! -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
+    sprintf(command, "dot %sLIST_DMP_№%d.dot -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
+    // sprintf(command, "dot %sLIST_DMP_№%d.dot -Gsize=20,20! -T png -o %sLIST_DMP_№%d.png", Img_dump_dir, dumpNumber, Img_dump_dir, dumpNumber);
     system(command);
     ++dumpNumber;
     return Node_tree_status::OK;
@@ -499,8 +509,11 @@ bool node_contains_var(Tree_node* node, char var) {
     return ret_val;
 }
 
-Tree_node* differ_node(Tree_node* node, char var) {
+Tree_node* differ_node(Tree* tree, Tree_node* node, char var) {
     assert(node && "node must not be NULL");
+
+    fgraph_tree(tree);
+
     printf("differ");
     if (node->type == Node_type::VARIABLE) {
        DIFF_VAR(node);
@@ -555,7 +568,7 @@ Tree* differ(Tree* tree, char var) {
     } else {
         printf("copy ok \n");
     }
-    diff_tree->root = differ_node(diff_tree->root, var);
+    diff_tree->root = differ_node(diff_tree, diff_tree->root, var);
 
     return diff_tree;
 }

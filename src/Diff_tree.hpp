@@ -7,6 +7,7 @@
 #include "stdlib.h"
 #include <stack>
 #include <cctype>
+#include "inttypes.h"
 #include "Difffer_DSL.hpp"
 
 static std::stack<char*> stack_trace;
@@ -94,7 +95,7 @@ struct Tree_node {
     Tree_node* prev;
     Tree_node* left;
     Tree_node* right;
-
+    uint8_t used = false;
     Node_type type = Node_type::NONE;
     Node_data data = {};
 
@@ -171,7 +172,7 @@ Node_tree_status get_token(Tokenizer* tokenizer, Token* token);
 //----------------------------------------Lexer end ----------------------------------------
 
 //----------------------------------------Differ begin ----------------------------------------
-Tree_node* differ_node(Tree_node* node, char var);
+Tree_node* differ_node(Tree_node* root, Tree_node* node, char var);
 
 Tree* differ(Tree* tree, char var);
 
