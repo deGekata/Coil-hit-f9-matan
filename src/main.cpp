@@ -8,6 +8,7 @@ int main() {
     system("rm ./dump/*.dot");
     system("rm ./dump/*.png");
     system("rm ./dump/*.avi");
+    system("rm ./dump/*.tex");
     // Tree_node node = {};
     // node.type = Node_type::VARIABLE;
     // node.data.variable= 'x';
@@ -38,6 +39,8 @@ int main() {
     Tree* diff_tree = differ(&tree, 'x');
 
     fgraph_tree(diff_tree);
+    printf("%d is one", is_node_one(tree.root->left));
+    
     // system("rm ./dump/*.dot");
     system("ffmpeg -f image2 -framerate 25 -pattern_type sequence -start_number 0 -r 3 -i ./dump/LIST_DMP_№%d.png -s 1920x1080 ./dump/test.avi");
     // write_node(&node, stdout);

@@ -14,18 +14,23 @@
 
 #define DIFF_ADD(node)  {if (node->left == NULL || node->right == NULL)\
                             return NULL;                               \
+                        node->left->is_diff = true;\
+                        node->right->is_diff = true;\
                         node->left  = differ_node(tree, node->left, var);     \
                         node->right = differ_node(tree, node->right, var);     \
                         return node;}
 
 #define DIFF_SUB(node)  {if (node->left == NULL || node->right == NULL)\
                             return NULL;                               \
+                        node->left->is_diff = true;\
+                        node->right->is_diff = true;\
                         node->left  = differ_node(tree, node->left, var);     \
                         node->right = differ_node(tree, node->right, var);     \
                         return node;} 
 
 #define DIFF_MUL(node) {if (node->left == NULL || node->right == NULL)   \
                             return NULL;                                  \
+                        if (node->left->type == Node_type::CONST || node->right->type == Node_type::CONST) return node; \
                         node->data.opr = Operation::ADD;                   \
                         Tree_node* left = node->left;                       \
                         Tree_node* right = node->right;                      \
@@ -33,8 +38,10 @@
                         node->right = OPERATOR(Operation::MUL);                \
                         node->left->left   = left;                              \
                         node->left->right  = right;                              \
-                        node->right->left  = (left);                     \
-                        node->right->right = (right);                     \
+                        node->right->left  = node_copy(left);                     \
+                        node->right->right = node_copy(right);                     \
+                        node->left->left->is_diff = true;\
+                        node->right->right->is_diff = true;\
                         differ_node(tree, node->left->left, var);                         \
                         differ_node(tree, node->right->right, var);                        \
                         return node;}                  
@@ -42,23 +49,28 @@
 
 #define DIFF_DIV(node) {if (node->left == NULL || node->right == NULL)   \
                             return NULL;                                  \
+                        if (node->left->type == Node_type::CONST && node->right->type == Node_type::CONST) return node; \
+                        if (node->right->type == Node_type::CONST) {node->left->is_diff = true; differ_node(tree, node->left, var); return node;} \
+                        if (node->left->type == Node_type::CONST) {node->right->is_diff = true; differ_node(tree, node->right, var); return node;} \
+                        \
                         Tree_node* left = node->left;                      \
                         Tree_node* right = node->right;                     \
                         node->left = OPERATOR(Operation::SUB);               \
                         node->right = OPERATOR(Operation::POW);               \
                         node->data.opr = Operation::MUL;                       \
                         node->right->right = CONST(-2);                         \
-                        node->right->left = (right);                    \
+                        node->right->left = node_copy(right);                    \
                                                                                   \
                         node->left->left   = OPERATOR(Operation::MUL);             \
                         node->left->right  = OPERATOR(Operation::MUL);            \
                                                                                  \
                         node->left->left->left = left;                          \
-                        node->left->left->right = (right);            \
-                                                                              \
+                        node->left->left->right = node_copy(right);            \
                         node->left->right->right = right;                    \
-                        node->left->right->left = (left);          \
-                                                                           \
+                        node->left->right->left = node_copy(left);          \
+                        node->left->left->left->is_diff = true;       \
+                        node->left->right->right->is_diff = true;   \
+                        \
                         differ_node(tree, node->left->left->left, var);         \
                         differ_node(tree, node->left->right->right, var);      \
                         return node;}                  
@@ -73,8 +85,9 @@
                         if (left_var && right_var) {\
                             node->left = new_node(Node_type::OPERATOR, {.opr = Operation::POW}, node, left, right);\
                             node->data.opr = Operation::MUL;                        \
-                            node->right = new_node(Node_type::OPERATOR, {.opr = Operation::MUL}, node, (right), OPERATOR(Operation::LOG));\
-                            node->right->right->left = (left);                                                                      \
+                            node->right = new_node(Node_type::OPERATOR, {.opr = Operation::MUL}, node, node_copy(right), OPERATOR(Operation::LOG));\
+                            node->right->right->left = node_copy(left);                                                                      \
+                            node->right->is_diff = true;\
                             differ_node(tree, node->right, var);    \
                             return node;                                                                      \
                         }\
@@ -92,16 +105,17 @@
                             node->type = Node_type::OPERATOR;                                                      \
                             node->data.opr = Operation::POW;                                                      \
                             node->right = OPERATOR(Operation::MUL);                                              \
-                            node->right->right = (right);                                              \
+                            node->right->right = node_copy(right);                                              \
                             node->right->left = OPERATOR(Operation::LOG);                                      \
-                            node->right->left->left = (left);                                                   \
+                            node->right->left->left = node_copy(left);                                                   \
+                            node->right->right->is_diff = true;\
                             differ_node(tree, node->right->right, var);                                            \
                             return node;                                                                    \
                         }                                                                                  \
                         if (left_var && !right_var) {                                                                    \
                             node->right = OPERATOR(Operation::MUL);\
-                            node->right->left = (left);\
-                            node->right->right = (right);\
+                            node->right->left = node_copy(left);\
+                            node->right->right = node_copy(right);\
                             node->left = OPERATOR(Operation::POW);\
                             node->left->left = left;\
                             node->left->right = OPERATOR(Operation::SUB);\
@@ -109,6 +123,7 @@
                             node->left->right->right = CONST(1);\
                             node->type = Node_type::OPERATOR; \
                             node->data.opr = Operation::MUL; \
+                            node->right->left->is_diff = true;\
                             differ_node(tree, node->right->left, var);\
                             return node;                                                                                     \
                         }                                                                                                   \
@@ -121,7 +136,8 @@
                         node->data.opr = Operation::MUL;                 \
                         node->left = OPERATOR(Operation::COS);            \
                         node->left->left = left;                           \
-                        node->right = (left);                      \
+                        node->right = node_copy(left);                      \
+                        node->right->is_diff = true;\
                         differ_node(tree, node->right, var);                       \
                         return node;}
 
@@ -133,7 +149,8 @@
                         node->left->left = CONST(-1);                      \
                         node->left->right = OPERATOR(Operation::SIN);       \
                         node->left->right->left = left;                      \
-                        node->right = (left);                        \
+                        node->right = node_copy(left);                        \
+                        node->right->is_diff = true;\
                         differ_node(tree, node->right, var);                         \
                         return node;}
 
@@ -145,7 +162,8 @@
                         node->left->left = OPERATOR(Operation::COS);       \
                         node->left->left->left = left;                      \
                         node->left->right = CONST(-2);                       \
-                        node->right = (left);                        \
+                        node->right = node_copy(left);                        \
+                        node->right->is_diff = true;\
                         differ_node(tree, node->right, var);                         \
                         return node;}
 
@@ -159,7 +177,8 @@
                         node->left->right = CONST(-2);                       \
                         node->right = OPERATOR(Operation::MUL);               \
                         node->right->left = CONST(-1);                         \
-                        node->right->right = (left);                   \
+                        node->right->right = node_copy(left);                   \
+                        node->right->is_diff = true;\
                         differ_node(tree, node->right->right, var);                    \
                         return node;}
 
@@ -170,7 +189,8 @@
                         node->left = OPERATOR(Operation::POW);            \
                         node->left->left = left;                           \
                         node->left->right = CONST(-1);                      \
-                        node->right = (left);                       \
+                        node->right = node_copy(left);                       \
+                        node->right->is_diff = true;\
                         differ_node(tree, node->right, var);                        \
                         return node;}
   

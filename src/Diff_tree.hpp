@@ -7,7 +7,6 @@
 #include "stdlib.h"
 #include <stack>
 #include <cctype>
-#include "inttypes.h"
 #include "Difffer_DSL.hpp"
 
 static std::stack<char*> stack_trace;
@@ -95,20 +94,29 @@ struct Tree_node {
     Tree_node* prev;
     Tree_node* left;
     Tree_node* right;
-    uint8_t used = false;
+    bool is_diff = false;
     Node_type type = Node_type::NONE;
     Node_data data = {};
+    size_t size = 0;
 
 };
 
 Tree_node* new_node (Node_type type, Node_data data, Tree_node* prev, Tree_node* left, Tree_node* right);
 
+Node_tree_status delete_node (Tree_node* node);
+
+Tree_node* node_copy(Tree_node* node);  
 
 bool is_node_const (Tree_node* node);
 
 bool is_node_variable (Tree_node* node);
 
 bool is_node_operation (Tree_node* node);
+
+bool is_node_one (Tree_node* node);
+
+bool is_node_zero (Tree_node* node);
+
 
 Node_tree_status node_write_const (Tree_node* node, FILE* ouput);
 
@@ -130,6 +138,10 @@ Node_tree_status tree_init(Tree* tree);
 Node_tree_status tree_read(Tree* tree, FILE* input);
 
 Node_tree_status fgraph_tree(Tree* tree);
+
+void tree_update_size(Tree* tree);
+
+int node_get_update_size(Tree_node* node);
 
 //----------------------------------------Tree end ----------------------------------------
 
@@ -172,11 +184,84 @@ Node_tree_status get_token(Tokenizer* tokenizer, Token* token);
 //----------------------------------------Lexer end ----------------------------------------
 
 //----------------------------------------Differ begin ----------------------------------------
+
+bool node_is_const(Tree_node* node);
+
+bool node_contains_const(Tree_node* node);
+
+bool node_contains_var(Tree_node* node, char var);
+
 Tree_node* differ_node(Tree_node* root, Tree_node* node, char var);
 
 Tree* differ(Tree* tree, char var);
 
+Tree_node* node_simplify(Tree_node* node);
+
+Tree* tree_simplify(Tree* tree);
+
+Tree_node* optimize_add(Tree_node* node);
+
+Tree_node* optimize_sub(Tree_node* node);
+
+Tree_node* optimize_mul(Tree_node* node);
+
+Tree_node* optimize_div(Tree_node* node);
+
+Tree_node* optimize_sum(Tree_node* node);
+
+Tree_node* optimize_pow(Tree_node* node);
+
+Tree_node* optimize_sin(Tree_node* node);
+
+Tree_node* optimize_cos(Tree_node* node);
+
+Tree_node* optimize_tan(Tree_node* node);
+
+Tree_node* optimize_cot(Tree_node* node);
+
+Tree_node* optimize_log(Tree_node* node);
+
+
+Tree_node* optimize_operator(Tree_node* node);
+
+
 //----------------------------------------Differ end ----------------------------------------
 
+
+//-----------------------------------------Tex begin ---------------------------------------
+
+void set_new_output_file();
+
+void end_current_output_file();
+
+Node_tree_status tex_graph_tree(Tree_node* node);
+
+Node_tree_status tex_graph_node(Tree_node* node);
+
+void tex_graph_const(Tree_node* node);
+
+void tex_graph_variable(Tree_node* node);
+    
+void tex_graph_add(Tree_node* node);
+
+void tex_graph_sub(Tree_node* node);
+
+void tex_graph_mul (Tree_node* node);
+
+void tex_graph_div (Tree_node* node);
+
+void tex_graph_pow (Tree_node* node);
+
+void tex_graph_sin (Tree_node* node);
+
+void tex_graph_cos (Tree_node* node);
+
+void tex_graph_tan (Tree_node* node);
+
+void tex_graph_cot (Tree_node* node);
+
+void tex_graph_log (Tree_node* node);
+
+//-----------------------------------------Tex end -----------------------------------------
 
 #endif
